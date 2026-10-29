@@ -1,0 +1,42 @@
+name: Build APK from zip
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: unzip -q CardGame.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - name: Engine unit tests
+        continue-on-error: true
+        working-directory: CardGame
+        run: gradle --no-daemon testDebugUnitTest
+      - name: Build debug and release APKs
+        working-directory: CardGame
+        run: gradle --no-daemon assembleDebug assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: CardGame/app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: CardGame/app/build/outputs/apk/release/*.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report
+          path: CardGame/app/build/reports/tests/
+          if-no-files-found: ignore
